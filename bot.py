@@ -18,9 +18,14 @@ async def tts_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("⏳ Озвучиваю...")
     tmp = tempfile.mktemp(suffix=".mp3")
     try:
-        await edge_tts.Communicate(text, VOICE).save(tmp)
+        communicate = edge_tts.Communicate(text, VOICE)
+        await asyncio.wait_for(communicate.save(tmp), timeout=30)
         with open(tmp, "rb") as f:
             await update.message.reply_audio(f)
+    except asyncio.TimeoutError:
+        await update.message.reply_text("❌ Timeout. Попробуй ещё раз.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка: {e}")
     finally:
         if os.path.exists(tmp):
             os.remove(tmp)
