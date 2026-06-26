@@ -1,12 +1,10 @@
-import asyncio
 import os
 import tempfile
-import edge_tts
+from gtts import gTTS
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 
 TOKEN = os.environ["BOT_TOKEN"]
-VOICE = "ru-RU-SvetlanaNeural"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привет! Отправь текст — озвучу 🎙️")
@@ -18,12 +16,10 @@ async def tts_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("⏳ Озвучиваю...")
     tmp = tempfile.mktemp(suffix=".mp3")
     try:
-        communicate = edge_tts.Communicate(text, VOICE)
-        await asyncio.wait_for(communicate.save(tmp), timeout=30)
+        tts = gTTS(text=text, lang="ru")
+        tts.save(tmp)
         with open(tmp, "rb") as f:
             await update.message.reply_audio(f)
-    except asyncio.TimeoutError:
-        await update.message.reply_text("❌ Timeout. Попробуй ещё раз.")
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {e}")
     finally:
