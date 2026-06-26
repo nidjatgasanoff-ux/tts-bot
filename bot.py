@@ -3,36 +3,30 @@ import os
 import tempfile
 import edge_tts
 from telegram import Update
-from telegram.ext import Application, MessageHandler, CommandHandler, filters, ContextTypes
+from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 
 TOKEN = os.environ["BOT_TOKEN"]
 VOICE = "ru-RU-SvetlanaNeural"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Привет! Отправь мне любой текст, и я озвучу его 🎙️"
-    )
+    await update.message.reply_text("Привет! Отправь текст — озвучу 🎙️")
 
 async def tts_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if not text:
         return
     await update.message.reply_text("⏳ Озвучиваю...")
-    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
-        tmp_path = f.name
+    tmp = tempfile.mktemp(suffix=".mp3")
     try:
-        communicate = edge_tts.Communicate(text, VOICE)
-        await communicate.save(tmp_path)
-        with open(tmp_path, "rb") as audio:
-            await update.message.reply_audio(audio, filename="speech.mp3")
+        await edge_tts.Communicate(text, VOICE).save(tmp)
+        with open(tmp, "rb") as f:
+            await update.message.reply_audio(f)
     finally:
-        os.unlink(tmp_path)
+        if os.path.exists(tmp):
+            os.remove(tmp)
 
-def main():
-    app = Application.builder().token(TOKEN).build()
+if __name__ == "__main__":
+    app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, tts_handler))
     app.run_polling()
-
-if __name__ == "__main__":
-    main()
